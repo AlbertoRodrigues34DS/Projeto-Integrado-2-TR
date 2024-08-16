@@ -19,8 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <stdlib.h>
-#include <stdint.h>
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include"ST7735\ST7735.h"
@@ -60,9 +59,28 @@
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
-short jogar=0;
 uint16_t cor=BLUE;
-unsigned int camp[6][6];
+short camp[8][8];
+short bomba = 10;
+short casastotais = 36;
+short casasvitoria = 0;
+short casasabertas = 0;
+short posxjogador=0;
+short posyjogador=0;
+short raio= 1;
+short posx=0;
+short posxtitulo=13;
+short posxtela=30;
+short posytitulo=0;
+short posytela=30;
+short posytela2=15;
+short posytela3=45;
+short posytela4=60;
+short posy=0;
+short bandeira;
+int i, j = 0;
+short cursorX = 1, cursorY = 1;
+char buffer [10];
 
 /* USER CODE END PV */
 
@@ -72,12 +90,14 @@ static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 // short está sendo utilizado por causa do espaço ocupado que é menor do que int
-short Menu( uint16_t cor);
-short Jogo(void);
+short Menu( uint16_t cor, short bomba);
+short Jogo(uint16_t cor);
 short DificuldadeLed(uint16_t cor);
-short Derrota(short VMenu);//V=voltar
-short Vitoria(short VMenu);//V=voltar
-short MudarCor(uint16_t cor);
+short Derrota_Vitoria(short casasabertas/*, uint16_t cor*/);
+short MudarCor(void);
+void cursorEsquerda(void);
+void cursorDireita(void);
+int sprintf(char *str, const char *format, ...);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -126,7 +146,7 @@ int main(void)
   while (1)
   {
 	 // short cor=0;
-	   Menu(cor);
+	   Menu(cor,bomba);
 	   ST7735_FillScreen(BLACK);
 	   while (1){
 
@@ -256,13 +276,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-short Menu( uint16_t cor){
+short Menu( uint16_t cor,short bomba){
 	ST7735_FillScreen(cor);
 	int escolha=0;
-	ST7735_WriteString(13, 0,"Campo Minado",Font_11x18, BLACK, BLUE );
-	ST7735_WriteString(30, 30,"P9-Jogar!",Font_7x10, BLACK, BLUE );
-	ST7735_WriteString(30, 45,"P10-Dificuldade:",Font_7x10, BLACK, BLUE );
-	ST7735_WriteString(30, 60,"P11-Cores:",Font_7x10, BLACK, BLUE );
+	ST7735_WriteString(posxtitulo, posytitulo,"Campo Minado",Font_11x18, BLACK, cor );
+	ST7735_WriteString(posxtela, posytela,"P9-Jogar!",Font_7x10, BLACK, cor );
+	ST7735_WriteString(posxtela, posytela3,"P10-Dificuldade:",Font_7x10, BLACK, cor );
+	ST7735_WriteString(posxtela, posytela4,"P11-Cores:",Font_7x10, BLACK, cor );
 
 
 	while(escolha==0){
@@ -280,7 +300,7 @@ short Menu( uint16_t cor){
 
 	switch (escolha) {
 			case 1:
-		    Jogo();
+		    Jogo(cor);
 			break;
 
 			case 2:
@@ -288,27 +308,70 @@ short Menu( uint16_t cor){
 			break;
 
 			case 3:
-			MudarCor(cor);
-			Menu(cor);
+			MudarCor();
+			Menu(cor,bomba);
 			break;
 		}
 
 
 	}
 
-short Jogo(void){
-//int bomba= rand() % 1 (camp[6][6]);
+short Jogo(uint16_t cor){
+
+	distribuirBombas(bomba);
+	int verificarbotao=0;
+	ST7735_FillScreen(cor);
+	ST7735_WriteString(posxtitulo, posytitulo, "Jogabilidade",Font_11x18, BLACK, cor );
+	ST7735_WriteString(7, posytela, "P10- colocar Bandeiras",Font_7x10, BLACK, cor );
+	ST7735_WriteString(23, posytela3 + 10, "Pr. qualquer botao",Font_7x10, BLACK, cor );
+	while (BOTAO9!=0 && BOTAO10!=0 && BOTAO11!=0 && BOTAO12!=0) {
+	}
+	ST7735_FillScreen(cor);
+	ST7735_FillRectangleFast(0, 0, 80, 80, WHITE);
+	ST7735_WriteString(90, posytela2, "Bandeiras",Font_7x10, BLACK, cor );
+	atualizarBandeiras();
+	for (i = 0; i <= 8; i++) {
+		ST7735_DrawLine((i*10), 0, (i*10), 80, BLACK);
+		ST7735_DrawLine(0, (i*10), 80, (i*10), BLACK);
+	}
+	ST7735_WriteString(2, 2, "X" , Font_7x10 , BLACK , WHITE);
+	//Tabuleiro: -1:Bomba; 0:Vazio n explorado; 1:Explorado; 2:Bandeira
+	while (verificarbotao==0){
+		if (BOTAO9==0) {
+			ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, " " , Font_7x10 , BLACK , WHITE);
+			consertaTabuleiro ();
+			cursorEsquerda();
+			ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, "X" , Font_7x10 , BLACK , WHITE);
+			consertaTabuleiro ();
+		}
+		else if (BOTAO11==0) {
+			ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, " " , Font_7x10 , BLACK , WHITE);
+			consertaTabuleiro ();
+			cursorDireita();
+			ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, "X" , Font_7x10 , BLACK , WHITE);
+			consertaTabuleiro ();
+		}
+		else if (BOTAO12==0) {
+			if (bomba > 0)
+			Bandeira();
+		}
+		else if (BOTAO10==0) {
+			Descoberta();
+			HAL_Delay(700);
+		}
+
+	}
 
 }
-short MudarCor(uint16_t cor)
+short MudarCor()
 {
 	ST7735_FillScreen(cor);
 		short escolhacor=0;
-		ST7735_WriteString(13, 0, "Tabela de cores",Font_7x10, BLACK, BLUE );
-		ST7735_WriteString(30, 15, "P9-Verde",Font_7x10, BLACK, BLUE );
-		ST7735_WriteString(30, 30, "PA10-Magenta",Font_7x10, BLACK, BLUE );
-		ST7735_WriteString(30, 60, "P11-Azul",Font_7x10, BLACK, BLUE );
-		ST7735_WriteString(30, 45, "P12-Voltar",Font_7x10, BLACK, BLUE );
+		ST7735_WriteString(posxtitulo, posytitulo, "Tabela de cores",Font_7x10, BLACK, cor );
+		ST7735_WriteString(posxtela, posytela2, "P9-Verde",Font_7x10, BLACK, cor );
+		ST7735_WriteString(posxtela, posytela, "PA10-Magenta",Font_7x10, BLACK, cor );
+		ST7735_WriteString(posytela, posytela3, "P11-Azul",Font_7x10, BLACK, cor );
+		ST7735_WriteString(posxtela, posytela4, "P12-Voltar",Font_7x10, BLACK, cor );
 
 		while(escolhacor==0){
 
@@ -316,34 +379,34 @@ short MudarCor(uint16_t cor)
 			if (BOTAO9 == 0 && BOTAO10 == 1 && BOTAO11 == 1 && BOTAO12 == 1) {
 				cor=GREEN;
 				ST7735_FillScreenFast(cor);
-				ST7735_WriteString(13, 0, "Tabela de cores",Font_7x10, BLACK, BLUE );
-				ST7735_WriteString(30, 15, "P9-Verde",Font_7x10, BLACK, BLUE );
-				ST7735_WriteString(30, 30, "PA10-Magenta",Font_7x10, BLACK, BLUE );
-				ST7735_WriteString(30, 45, "P11-Azul",Font_7x10, BLACK, BLUE );
-				ST7735_WriteString(30, 60, "P12-Voltar",Font_7x10, BLACK, BLUE );
+				ST7735_WriteString(posxtitulo, posytitulo, "Tabela de cores",Font_7x10, BLACK, cor );
+				ST7735_WriteString(posxtela, posytela2, "P9-Verde",Font_7x10, BLACK, cor );
+				ST7735_WriteString(posxtela, posytela, "PA10-Magenta",Font_7x10, BLACK, cor );
+				ST7735_WriteString(posxtela, posytela3, "P11-Azul",Font_7x10, BLACK, cor );
+				ST7735_WriteString(posxtela, posytela4, "P12-Voltar",Font_7x10, BLACK, cor );
 
 			    	}
 			    	else if (BOTAO9 == 1 && BOTAO10 == 0 && BOTAO11 == 1 && BOTAO12 == 1) {
 			    	    cor=MAGENTA;
 			    	    ST7735_FillScreenFast(cor);
-			    	    ST7735_WriteString(13, 0, "Tabela de cores",Font_7x10, BLACK, BLUE );
-						ST7735_WriteString(30, 15, "P9-Verde",Font_7x10, BLACK, BLUE );
-		  				ST7735_WriteString(30, 30, "PA10-Magenta",Font_7x10, BLACK, BLUE );
- 	    				ST7735_WriteString(30, 45, "P11-Azul",Font_7x10, BLACK, BLUE );
-	    				ST7735_WriteString(30, 60, "P12-Voltar",Font_7x10, BLACK, BLUE );
+			    	    ST7735_WriteString(posxtitulo, posytitulo, "Tabela de cores",Font_7x10, BLACK, cor );
+						ST7735_WriteString(posxtela, posytela2, "P9-Verde",Font_7x10, BLACK, cor );
+		  				ST7735_WriteString(posxtela, posytela, "PA10-Magenta",Font_7x10, BLACK, cor );
+ 	    				ST7735_WriteString(posxtela, posytela3, "P11-Azul",Font_7x10, BLACK, cor );
+	    				ST7735_WriteString(posxtela, posytela4, "P12-Voltar",Font_7x10, BLACK, cor );
 			    	    	  }
 
 				else if (BOTAO9 == 1 && BOTAO10 == 1 && BOTAO11 == 0 && BOTAO12 == 1) {
 					cor=BLUE;
 					ST7735_FillScreenFast(cor);
-					ST7735_WriteString(13, 0, "Tabela de cores",Font_7x10, BLACK, BLUE );
-					ST7735_WriteString(30, 15, "P9-Verde",Font_7x10, BLACK, BLUE );
-			  		ST7735_WriteString(30, 30, "PA10-Magenta",Font_7x10, BLACK, BLUE );
-					ST7735_WriteString(30, 45, "P11-Azul",Font_7x10, BLACK, BLUE );
-					ST7735_WriteString(30, 60, "P12-Voltar",Font_7x10, BLACK, BLUE );
+					ST7735_WriteString(posxtitulo,posytitulo, "Tabela de cores",Font_7x10, BLACK, cor );
+					ST7735_WriteString(posxtela, posytela2, "P9-Verde",Font_7x10, BLACK, cor );
+			  		ST7735_WriteString(posxtela, posxtela, "PA10-Magenta",Font_7x10, BLACK, cor );
+					ST7735_WriteString(posxtela, posytela3, "P11-Azul",Font_7x10, BLACK, cor );
+					ST7735_WriteString(posxtela, posytela4, "P12-Voltar",Font_7x10, BLACK, cor );
 				    	    	  }
 				else if(BOTAO9 == 1 && BOTAO10 == 1 && BOTAO11 == 1 && BOTAO12 == 0){
-					Menu(cor);
+					Menu(cor,bomba);
 				}
 		}
 
@@ -352,15 +415,16 @@ short DificuldadeLed(uint16_t cor){
 	int escolhadificuldade=0;
 
 	ST7735_FillScreenFast(cor);
-	ST7735_WriteString(13, 0, "Escolha o nivel",Font_7x10, BLACK, BLUE );
-	ST7735_WriteString(30, 15, "P9-Facil",Font_7x10, BLACK, BLUE );
-	ST7735_WriteString(30, 30, "PA10-Medio",Font_7x10, BLACK, BLUE );
-	ST7735_WriteString(30, 45, "P11-Dficil",Font_7x10, BLACK, BLUE );
-	ST7735_WriteString(30, 60, "P12-Voltar",Font_7x10, BLACK, BLUE );
+	ST7735_WriteString(posxtitulo, posytitulo, "Escolha o nivel",Font_7x10, BLACK, cor );
+	ST7735_WriteString(posxtela, posytela2, "P9-Facil",Font_7x10, BLACK, cor );
+	ST7735_WriteString(posxtela, posytela, "PA10-Medio",Font_7x10, BLACK, cor );
+	ST7735_WriteString(posxtela, posytela3, "P11-Dificil",Font_7x10, BLACK, cor );
+	ST7735_WriteString(posxtela, posytela4, "P12-Voltar",Font_7x10, BLACK, cor );
 
 	while(escolhadificuldade==0){
 	if(BOTAO9==0){
 	LED6_LIGA;
+	bomba=7;
 }
 	else if(BOTAO10==0){
 		LED6_LIGA;
@@ -370,10 +434,146 @@ short DificuldadeLed(uint16_t cor){
 	LED6_LIGA;
 	LED5_LIGA;
 	LED4_LIGA;
+	bomba=15;
+	}
+	else if(BOTAO12==0){
+		LED6_DESLIGA;
+		LED5_DESLIGA;
+		LED4_DESLIGA;
+		escolhadificuldade=1;
+		Menu(cor,bomba);
+
+	}
+
+}
+}
+short Derrota_Vitoria(short result/*casasabertas, uint16_t cor */){
+		//casasvitoria=casastotais-bomba;
+		if(/*casasabertas==casasvitoria*/ result == 1){
+			ST7735_FillScreenFast(GREEN);
+			ST7735_WriteString(posxtitulo, posytitulo, "Parabens!", Font_11x18, BLACK, GREEN);
+		/*	ST7735_WriteString(posxtela, posytela, "Deseja Continuar?", Font_7x10, BLACK, cor);
+			ST7735_WriteString(posxtela, posytela3, "P9->Sim", Font_7x10, BLACK, cor);
+			ST7735_WriteString(posxtela, posytela4, "P12->Nao", Font_7x10, BLACK, cor);
+			if(BOTAO9==0){
+							Jogo(cor);
+						}
+						else if(BOTAO12==0){
+							return 0;
+						}*/
+
+		}
+		else {
+			ST7735_FillScreenFast(RED);
+			ST7735_WriteString(posxtitulo, posytitulo, "Voce Perdeu", Font_11x18, BLACK, RED);
+		/*	ST7735_WriteString(posxtela, posytela2, "Deseja Continuar?", Font_7x10, BLACK, cor);
+			ST7735_WriteString(posxtela, posytela3, "P9->Sim", Font_7x10, BLACK, cor);
+			ST7735_WriteString(posxtela, posytela4, "P12->Nao", Font_7x10, BLACK, cor);
+			if(BOTAO9==0){
+				Jogo(cor);
+			}
+			else if(BOTAO12==0){
+				return 0;
+			}
+
+
+*/
+		}
+	while (1) {}
+	}
+
+void Descoberta() {
+	if (camp[cursorX - 1][cursorY - 1] == -1) {
+		Derrota_Vitoria(0);
+	} else {
+		camp[cursorX - 1][cursorY - 1] = 1;
+		ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, "O" , Font_7x10 , BLACK , WHITE);
+		consertaTabuleiro ();
+
+		cursorEsquerda();
+		ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, "X" , Font_7x10 , BLACK , WHITE);
+		consertaTabuleiro ();
+
+		for(i = 0; i < 8; i++) {
+			for(j = 0; j < 8; j++) {
+				if ((camp[i][j] == 0)||(camp[i][j] == -1)) {
+					return;
+				}
+			}
+		}
+		Derrota_Vitoria(1);
 	}
 }
+
+void Bandeira(void){
+	camp[cursorX - 1][cursorY - 1] = 2;
+	bomba--;
+
+	ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, "B" , Font_7x10 , BLACK , WHITE);
+	consertaTabuleiro ();
+
+	cursorEsquerda();
+	ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, "X" , Font_7x10 , BLACK , WHITE);
+	consertaTabuleiro ();
+
+	atualizarBandeiras();
+	HAL_Delay(700);
 }
 
+void atualizarBandeiras() {
+	sprintf(buffer, "%d ", bomba);
+	ST7735_WriteString(110, 40, buffer,Font_11x18, BLACK, cor );
+}
+void cursorDireita () {
+	for(;;) {
+		cursorX++;
+		if (cursorX == 9 && cursorY == 8) {
+			cursorX = 1;
+			cursorY = 1;
+		} else if (cursorX == 9) {
+			cursorX = 1;
+			cursorY++;
+		}
+
+		if (camp[cursorX - 1][cursorY - 1] != 1 && camp[cursorX - 1][cursorY - 1] != 2) {
+			return;
+		}
+	}
+}
+void cursorEsquerda () {
+	for(i = 0; i<36; i++) {
+		cursorX--;
+		if (cursorX == 0 && cursorY == 1) {
+			cursorX = 8;
+			cursorY = 8;
+		} else if (cursorX == 0) {
+			cursorX = 8;
+			cursorY--;
+		}
+
+		if (camp[cursorX - 1][cursorY - 1] != 1 && camp[cursorX - 1][cursorY - 1] != 2) {
+					return;
+		}
+	}
+}
+void consertaTabuleiro () {
+			ST7735_DrawLine((cursorX*10), 0, (cursorX*10), 80, BLACK);
+			ST7735_DrawLine(0, (cursorY*10), 80, (cursorY*10), BLACK);
+}
+
+void distribuirBombas(int nBombas) {
+	for(;;) {
+		for(i = 0; i < 8; i++) {
+			for(j = 0; j < 8; j++) {
+				short valor = (rand() % 2) - 1;
+				nBombas+= valor;
+				camp[i][j] = valor;
+				if (nBombas == 0)
+					return;
+			}
+		}
+	}
+}
 /* USER CODE END 4 */
 
 /**

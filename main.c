@@ -93,8 +93,8 @@ static void MX_SPI1_Init(void);
 short Menu( uint16_t cor, short bomba);
 short Jogo(uint16_t cor);
 short DificuldadeLed(uint16_t cor);
-short Derrota_Vitoria(short casasabertas, uint16_t cor);
-short MudarCor(uint16_t cor);
+short Derrota_Vitoria(short casasabertas/*, uint16_t cor*/);
+short MudarCor(void);
 void cursorEsquerda(void);
 void cursorDireita(void);
 int sprintf(char *str, const char *format, ...);
@@ -308,7 +308,7 @@ short Menu( uint16_t cor,short bomba){
 			break;
 
 			case 3:
-			MudarCor(cor);
+			MudarCor();
 			Menu(cor,bomba);
 			break;
 		}
@@ -317,6 +317,7 @@ short Menu( uint16_t cor,short bomba){
 	}
 
 short Jogo(uint16_t cor){
+
 	distribuirBombas(bomba);
 	int verificarbotao=0;
 	ST7735_FillScreen(cor);
@@ -354,11 +355,15 @@ short Jogo(uint16_t cor){
 			if (bomba > 0)
 			Bandeira();
 		}
+		else if (BOTAO10==0) {
+			Descoberta();
+			HAL_Delay(700);
+		}
 
 	}
 
 }
-short MudarCor(uint16_t cor)
+short MudarCor()
 {
 	ST7735_FillScreen(cor);
 		short escolhacor=0;
@@ -442,12 +447,12 @@ short DificuldadeLed(uint16_t cor){
 
 }
 }
-short Derrota_Vitoria(short casasabertas, uint16_t cor ){
-		casasvitoria=casastotais-bomba;
-		if(casasabertas==casasvitoria){
+short Derrota_Vitoria(short result/*casasabertas, uint16_t cor */){
+		//casasvitoria=casastotais-bomba;
+		if(/*casasabertas==casasvitoria*/ result == 1){
 			ST7735_FillScreenFast(GREEN);
-			ST7735_WriteString(posxtitulo, posytitulo, "Parabens!", Font_11x18, BLACK, cor);
-			ST7735_WriteString(posxtela, posytela, "Deseja Continuar?", Font_7x10, BLACK, cor);
+			ST7735_WriteString(posxtitulo, posytitulo, "Parabens!", Font_11x18, BLACK, GREEN);
+		/*	ST7735_WriteString(posxtela, posytela, "Deseja Continuar?", Font_7x10, BLACK, cor);
 			ST7735_WriteString(posxtela, posytela3, "P9->Sim", Font_7x10, BLACK, cor);
 			ST7735_WriteString(posxtela, posytela4, "P12->Nao", Font_7x10, BLACK, cor);
 			if(BOTAO9==0){
@@ -455,13 +460,13 @@ short Derrota_Vitoria(short casasabertas, uint16_t cor ){
 						}
 						else if(BOTAO12==0){
 							return 0;
-						}
+						}*/
 
 		}
 		else {
 			ST7735_FillScreenFast(RED);
-			ST7735_WriteString(posxtitulo, posytitulo, "Você Perdeu", Font_11x18, BLACK, cor);
-			ST7735_WriteString(posxtela, posytela2, "Deseja Continuar?", Font_7x10, BLACK, cor);
+			ST7735_WriteString(posxtitulo, posytitulo, "Voce Perdeu", Font_11x18, BLACK, RED);
+		/*	ST7735_WriteString(posxtela, posytela2, "Deseja Continuar?", Font_7x10, BLACK, cor);
 			ST7735_WriteString(posxtela, posytela3, "P9->Sim", Font_7x10, BLACK, cor);
 			ST7735_WriteString(posxtela, posytela4, "P12->Nao", Font_7x10, BLACK, cor);
 			if(BOTAO9==0){
@@ -472,9 +477,33 @@ short Derrota_Vitoria(short casasabertas, uint16_t cor ){
 			}
 
 
-
+*/
 		}
+	while (1) {}
 	}
+
+void Descoberta() {
+	if (camp[cursorX - 1][cursorY - 1] == -1) {
+		Derrota_Vitoria(0);
+	} else {
+		camp[cursorX - 1][cursorY - 1] = 1;
+		ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, "O" , Font_7x10 , BLACK , WHITE);
+		consertaTabuleiro ();
+
+		cursorEsquerda();
+		ST7735_WriteString(2 + (cursorX - 1) * 10, 2 + (cursorY - 1) * 10, "X" , Font_7x10 , BLACK , WHITE);
+		consertaTabuleiro ();
+
+		for(i = 0; i < 8; i++) {
+			for(j = 0; j < 8; j++) {
+				if ((camp[i][j] == 0)||(camp[i][j] == -1)) {
+					return;
+				}
+			}
+		}
+		Derrota_Vitoria(1);
+	}
+}
 
 void Bandeira(void){
 	camp[cursorX - 1][cursorY - 1] = 2;
@@ -512,7 +541,7 @@ void cursorDireita () {
 	}
 }
 void cursorEsquerda () {
-	for(;;) {
+	for(i = 0; i<36; i++) {
 		cursorX--;
 		if (cursorX == 0 && cursorY == 1) {
 			cursorX = 8;
